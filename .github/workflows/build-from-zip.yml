@@ -2,13 +2,10 @@
 name: Pad7 Launcher aus ZIP bauen
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
-    paths:
-      - 'Pad7Launcher-GitHub.zip'
-      - '.github/workflows/build-from-zip.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,30 +18,35 @@ jobs:
       - name: Repository herunterladen
         uses: actions/checkout@v4
 
-      - name: Java 17 einrichten
+      - name: Java 17 installieren
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Android SDK einrichten
-        uses: android-actions/setup-android@v3
+      - name: Gradle 8.9 einrichten
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
 
-      - name: Android SDK Pakete installieren
-        run: |
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v4
+        with:
+          packages: |
+            platform-tools
+            platforms;android-35
+            build-tools;35.0.0
 
       - name: ZIP entpacken
         run: |
           mkdir -p source
           unzip -o Pad7Launcher-GitHub.zip -d source
-          find source -name settings.gradle -o -name settings.gradle.kts
 
-      - name: Projektverzeichnis finden
+      - name: Projekt finden
         run: |
           PROJECT_DIR=$(find source -name settings.gradle -printf '%h\n' | head -n 1)
           if [ -z "$PROJECT_DIR" ]; then
-            echo "Keine settings.gradle in der ZIP gefunden!"
+            echo "Android-Projekt nicht gefunden!"
             exit 1
           fi
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
@@ -52,9 +54,9 @@ jobs:
       - name: APK bauen
         run: |
           cd "$PROJECT_DIR"
-          gradle --no-daemon assembleDebug
+          gradle --no-daemon --stacktrace assembleDebug
 
-      - name: APK bereitstellen
+      - name: APK hochladen
         uses: actions/upload-artifact@v4
         with:
           name: Pad7-Launcher-APK
