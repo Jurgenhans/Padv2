@@ -31,25 +31,27 @@ jobs:
 
       - name: Android SDK einrichten
         uses: android-actions/setup-android@v4
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
+
+      - name: Android Pakete einzeln installieren
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
 
       - name: ZIP entpacken
         run: |
           mkdir -p source
           unzip -o Pad7Launcher-GitHub.zip -d source
 
-      - name: Projekt finden
+      - name: Android Projekt finden
         run: |
-          PROJECT_DIR=$(find source -name settings.gradle -printf '%h\n' | head -n 1)
+          PROJECT_DIR=$(find source -name settings.gradle -type f -printf '%h\n' | head -n 1)
           if [ -z "$PROJECT_DIR" ]; then
-            echo "Android-Projekt nicht gefunden!"
+            echo "FEHLER: settings.gradle nicht gefunden!"
             exit 1
           fi
           echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "Projekt gefunden: $PROJECT_DIR"
 
       - name: APK bauen
         run: |
@@ -60,6 +62,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Pad7-Launcher-APK
-          path: source/**/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
